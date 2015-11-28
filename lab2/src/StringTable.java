@@ -1,0 +1,282 @@
+package lab2;
+
+import java.lang.Integer;
+
+/**
+ * A hash table mapping Strings to their positions in the pattern sequence.
+ *
+ * Fill in the methods for this class.
+ */
+public class StringTable {
+	
+	public Record[] hashTable;
+	public int count = 0;
+	public int size;
+    /**
+     * Create an empty table of size n
+     *
+     * @param n size of the table
+     */
+    public StringTable(int n) {
+        // TODO: implement this method
+    	this.hashTable = new Record[n];
+    	for(int i = 0; i < n; i++){
+    		this.hashTable[i] = new Record(null);
+    	}
+    	this.size = n;
+    }
+
+    /**
+     * Create an empty table.  You should use this construction when you are
+     * implementing the doubling procedure.
+     */
+    public StringTable() {
+        // TODO: implement this method
+    	this(4);
+    }
+
+    /**
+     * Insert a Record r into the table.
+     *
+     * If you get two insertions with the same key value, return false.
+     *
+     * @param r Record to insert into the table.
+     * @return boolean true if the insertion succeeded, false otherwise
+     */
+    public boolean insert(Record r) {
+        // TODO: implement this method
+    	boolean checkResult = checkLoadFactor();
+    	if(checkResult){
+    		doubleSize();
+    	}
+    	int k = toHashKey(r.getKey());
+    	int hk = baseHash(k);
+    	int shk = stepHash(k);
+
+    	while(this.hashTable[hk].getKey() != null && !this.hashTable[hk].getDeleted()){
+    		if(this.hashTable[hk].getHashKey() == k && this.hashTable[hk].getKey().equals(r.getKey())){
+    			return false;
+    		}
+    		hk = (hk + shk)%this.hashTable.length;
+    	}
+    	try{
+    		r.setHashKey(k);
+    		this.hashTable[hk] = r;
+    		this.count++;
+    		return true;
+    	}catch(Exception e){
+    		System.out.println(hk + ", bashkey = " + baseHash(k) + ", stepkey = " + stepHash(k));
+    		return false;
+    	}
+    }
+
+    /**
+     * Delete a record from the table.
+     *
+     * Note: You'll have to find the record first unless you keep some
+     * extra information in the Record structure.
+     *
+     * @param r Record to remove from the table.
+     */
+    public void remove(Record r) {
+        // TODO: implement this method
+    	int k = toHashKey(r.getKey());
+    	int hk = baseHash(k);
+    	int shk = stepHash(k);
+    	while(!(this.hashTable[hk].getHashKey() == k && this.hashTable[hk].getKey().equals(r.getKey()))){
+    		hk = (hk + shk)%this.hashTable.length;
+    	}
+    	this.hashTable[hk].setDeleted(true);
+    	this.count--;
+    }
+
+    /**
+     * Find a record with a key matching the input.
+     *
+     * @param key to find
+     * @return the matched Record or null if no match exists.
+     */
+    public Record find(String key) {
+        // TODO: implement this method
+    	if (this.count == 0){
+    		return null;
+    	}
+    	int k = toHashKey(key);
+    	int hk = baseHash(k);
+		int shk = stepHash(k);
+
+		//not set, or deleted, return null
+    	if(this.hashTable[hk].getKey() == null || this.hashTable[hk].getDeleted() && this.hashTable[hk].getHashKey() == k && this.hashTable[hk].getKey().equals(key)){
+    		return null;
+    	}
+    	
+    	//not deleted and find the record, return the record
+    	if(!this.hashTable[hk].getDeleted() && this.hashTable[hk].getHashKey() == k && this.hashTable[hk].getKey().equals(key)){
+    		return this.hashTable[hk];
+    	}else{
+    		hk = (hk + shk)%this.hashTable.length;
+    		while(this.hashTable[hk].getKey() != null){
+    			if(!this.hashTable[hk].getDeleted() && this.hashTable[hk].getHashKey() == k && this.hashTable[hk].getKey().equals(key)){
+    	    		return this.hashTable[hk];
+    	    	}
+    			hk = (hk + shk)%this.hashTable.length;
+    		}
+    	}
+       return null;
+    }
+
+    /**
+     * Return the size of the hash table (i.e. the number of elements
+     * this table can hold)
+     *
+     * @return the size of the table
+     */
+    public int size() {
+        // TODO: implement this method
+       return this.size;
+    }
+
+    /**
+     * Return the hash position of this key.  If it is in the table, return
+     * the postion.  If it isn't in the table, return the position it would
+     * be put in.  This value should always be smaller than the size of the
+     * hash table.
+     *
+     * @param key to hash
+     * @return the int hash
+     */
+    public int hash(String key) {
+        // TODO: implement this method
+       int k = toHashKey(key);
+       int hk = baseHash(k);
+       int shk = stepHash(k);
+       while(this.hashTable[hk].getKey() != null && !this.hashTable[hk].getDeleted()){
+    	   hk = (hk + shk)%this.hashTable.length;
+   		}
+   		return hk;
+    }
+
+    /**
+     * Convert a String key into an integer that serves as input to hash functions.
+     * This mapping is based on the idea of a linear-congruential pseuodorandom
+     * number generator, in which successive values r_i are generated by computing
+     *    r_i = (A * r_(i-1) + B) mod M
+     * A is a large prime number, while B is a small increment thrown in so that
+     * we don't just compute successive powers of A mod M.
+     *
+     * We modify the above generator by perturbing each r_i, adding in the ith
+     * character of the string and its offset, to alter the pseudorandom
+     * sequence.
+     *
+     * @param s String to hash
+     * @return int hash
+     */
+    int toHashKey(String s) {
+        int A = 1952786893;
+        int B = 367253;
+        int v = B;
+
+        for (int j = 0; j < s.length(); j++) {
+            char c = s.charAt(j);
+            v = A * (v + (int) c + j) + B;
+        }
+
+        if (v < 0) {
+            v = -v;
+        }
+        return v;
+    }
+
+    /**
+     * Computes the base hash of a hash key
+     *
+     * @param hashKey
+     * @return int base hash
+     */
+    int baseHash(int hashKey) {
+        // TODO: implement this method
+    	double A = (Math.sqrt(5)-1)/2;
+    	int hk =  (int) Math.floor(this.hashTable.length*(hashKey*A % 1));
+    	return hk;
+    	
+    }
+
+    /**
+     * Computes the step hash of a hash key
+     *
+     * @param hashKey
+     * @return int step hash
+     */
+    int stepHash(int hashKey) {
+        // TODO: implement this method
+    	//int hk = 1 + hashKey % (this.hashTable.length-1);
+    	double A = Math.PI/5;
+    	int hk =  (int) Math.floor(this.hashTable.length*(hashKey*A % 1));
+
+    	if(hk % 2 == 0){
+    		hk = hk -1;
+    	}
+    	if(hk == -1){
+    		return 1;
+    	}
+    	if(hk == 0 || this.hashTable.length % hk == 0){
+    		return 1;
+    	}
+    	return hk;
+    }
+    
+    private boolean checkLoadFactor(){
+    	if(this.count>= this.hashTable.length*1/4){
+    		return true;
+    	}
+    	return false;
+    }
+    
+    private void doubleSize(){
+    	Record[] tempTable = this.hashTable;
+    	int actualSize = getPower(tempTable.length);
+    	this.size = this.size*2;
+    	this.hashTable = new Record[actualSize];
+    	//System.out.println("length = " + this.hashTable.length);
+    	for(int i = 0; i < this.hashTable.length; i++){
+    		this.hashTable[i] = new Record(null);
+    	}
+    	for(int i = 0; i < tempTable.length; i++){
+    		if(tempTable[i].getKey() != null && !tempTable[i].getDeleted()){
+    	    	int hk = baseHash(tempTable[i].getHashKey());
+    	    	int shk = stepHash(tempTable[i].getHashKey());
+    	    	while(this.hashTable[hk].getKey() != null){
+    	    		hk = (hk + shk)%this.hashTable.length;
+    	    	}
+    	    	
+    	    	this.hashTable[hk] = tempTable[i];
+    		}
+    	}
+    }
+    
+    private int getPower(int n){
+    	String s = "";
+    	int m = n*2;
+    	n = n*2;
+    	while(n>0){
+    		s = n%2 + s;
+    		n = n/2;
+    	}
+    	boolean b = false;
+    	for(int i=1; i < s.length(); i++){
+    		if(!s.substring(i, i+1).equals("0")){
+    			b = true;
+    			break;
+    		}
+    	}
+    	if(b){
+    		int k = 1;
+    		for(int i = 0; i<s.length(); i++){
+    			k=k*2;
+    		}
+    		m = k;
+    	}
+    	return m;
+    	
+    }
+}

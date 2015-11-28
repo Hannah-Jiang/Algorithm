@@ -1,0 +1,7 @@
+<<<<<<< .mine
+Email: <xuehua.jiang>
+Nickname: <Hana>
+=======
+Email: <xuehua.jiang@wustl.edu>
+Nickname: <Hana>
+>>>>>>> .r33
